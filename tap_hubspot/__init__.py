@@ -294,18 +294,22 @@ def log_rate_limit(resp):
     """
     Prints out the content for the rate limits headers in the response.
     """
-    for header in [
-        "X-HubSpot-RateLimit-Daily",
-        "X-HubSpot-RateLimit-Daily-Remaining",
-        "X-HubSpot-RateLimit-Interval-Milliseconds",
-        "X-HubSpot-RateLimit-Max",
-        "X-HubSpot-RateLimit-Remaining"
-    ]:
-        LOGGER.info("Header: {}, value: {}".format(
-            header,
-            resp.headers.get(header)
-        ))
-
+    if resp.status_code == 429:
+        for header in [
+            "X-HubSpot-RateLimit-Daily",
+            "X-HubSpot-RateLimit-Daily-Remaining",
+            "X-HubSpot-RateLimit-Interval-Milliseconds",
+            "X-HubSpot-RateLimit-Max",
+            "X-HubSpot-RateLimit-Remaining"
+        ]:
+            LOGGER.info("Header: {}, value: {}".format(
+                header,
+                resp.headers.get(header)
+            ))
+            LOGGER.info("429 response from path: {} - {}".format(
+                resp.url,
+                resp.content
+            ))
 
 
 @backoff.on_exception(backoff.constant,
