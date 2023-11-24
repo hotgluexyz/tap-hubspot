@@ -293,11 +293,11 @@ def get_params_and_headers(params):
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
-                      max_tries=5,
+                      max_tries=10,
                       jitter=None,
                       giveup=giveup,
                       on_giveup=on_giveup,
-                      interval=10)
+                      interval=20)
 def request(url, params=None):
 
     params, headers = get_params_and_headers(params)
@@ -336,11 +336,11 @@ def lift_properties_and_versions(record):
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
-                      max_tries=5,
+                      max_tries=10,
                       jitter=None,
                       giveup=giveup,
                       on_giveup=on_giveup,
-                      interval=10)
+                      interval=20)
 def post_search_endpoint(url, data, params=None):
 
     params, headers = get_params_and_headers(params)
@@ -442,7 +442,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
 def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     if len(vids) == 0:
         return
-    
+
     data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
     time_extracted = utils.now()
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -460,7 +460,7 @@ default_contact_params = {
 def _sync_subscription_types(catalog, subscribers_emails, schema, bumble_bee):
     if len(subscribers_emails) == 0:
         return
-    
+
     for subscriber_email in subscribers_emails:
         record = request(get_url("subscription_types", subscriber_email=subscriber_email)).json()
         time_extracted = utils.now()
@@ -497,7 +497,7 @@ def sync_contacts(STATE, ctx):
                 while not break_loop:
                     data = request(get_url("list_contacts_recent", list_id=list_id), params=params).json()
                     for record in data.get("contacts", []):
-                       
+
                         if record["addedAt"] >= int(start.timestamp()*1000):
                             if record['vid'] not in newly_added:
                                 newly_added.append(record["vid"])
@@ -509,7 +509,7 @@ def sync_contacts(STATE, ctx):
                         if len(vids) == 100:
                             _sync_contact_vids(catalog, vids, schema, bumble_bee)
                             vids = []
-                    
+
                     if data["has-more"] and not break_loop:
                         params["vidOffset"] = data["vid-offset"]
                         params["timeOffset"] = data["time-offset"]
