@@ -290,6 +290,24 @@ def get_params_and_headers(params):
     return params, headers
 
 
+def log_rate_limit(resp):
+    """
+    Prints out the content for the rate limits headers in the response.
+    """
+    for header in [
+        "X-HubSpot-RateLimit-Daily",
+        "X-HubSpot-RateLimit-Daily-Remaining",
+        "X-HubSpot-RateLimit-Interval-Milliseconds",
+        "X-HubSpot-RateLimit-Max",
+        "X-HubSpot-RateLimit-Remaining"
+    ]:
+        LOGGER.info("Header: {}, value: {}".format(
+            header,
+            resp.headers.get(header)
+        ))
+
+
+
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
@@ -306,6 +324,7 @@ def request(url, params=None):
     LOGGER.info("GET %s", req.url)
     with metrics.http_request_timer(parse_source_from_url(url)) as timer:
         resp = SESSION.send(req)
+        log_rate_limit(resp)
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
@@ -353,6 +372,7 @@ def post_search_endpoint(url, data, params=None):
             params=params,
             headers=headers
         )
+        log_rate_limit(resp)
 
         resp.raise_for_status()
 
