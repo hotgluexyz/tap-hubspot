@@ -498,8 +498,13 @@ def sync_contacts(STATE, ctx):
                 while not break_loop:
                     data = request(get_url("list_contacts_recent", list_id=list_id), params=params).json()
                     for record in data.get("contacts", []):
+
+                        modified_time = utils.strptime_with_tz(
+                        _transform_datetime( # pylint: disable=protected-access
+                            record["addedAt"],
+                            UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
                        
-                        if record["addedAt"] >= int(start.timestamp()*1000):
+                        if modified_time > start:
                             if record['vid'] not in newly_added:
                                 newly_added.append(record["vid"])
                                 vids.append(record["vid"])
@@ -510,6 +515,9 @@ def sync_contacts(STATE, ctx):
                         if len(vids) == 100:
                             _sync_contact_vids(catalog, vids, schema, bumble_bee)
                             vids = []
+                    
+                        if modified_time > max_bk_value:
+                            max_bk_value = modified_time
                     
                     if data["has-more"] and not break_loop:
                         params["vidOffset"] = data["vid-offset"]
@@ -527,7 +535,7 @@ def sync_contacts(STATE, ctx):
                         row[bookmark_key],
                         UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
-            if not modified_time or modified_time >= start:
+            if not modified_time or modified_time > start:
                 if row['vid'] not in newly_added:
                     vids.append(row['vid'])
 
@@ -536,7 +544,7 @@ def sync_contacts(STATE, ctx):
                     if identity['type'] == 'EMAIL':
                         subscriber_emails.append(identity['value'])
 
-            if modified_time and modified_time >= max_bk_value:
+            if modified_time and modified_time > max_bk_value:
                 max_bk_value = modified_time
 
             if len(vids) == 100:
