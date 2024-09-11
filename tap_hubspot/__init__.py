@@ -290,12 +290,14 @@ def get_params_and_headers(params):
 
     return params, headers
 
+def jitter_120(value):
+    return 120
 
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
                       max_tries=5,
-                      jitter=None,
+                      jitter=jitter_120,
                       giveup=giveup,
                       on_giveup=on_giveup,
                       interval=10)
