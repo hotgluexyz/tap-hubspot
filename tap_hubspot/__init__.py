@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import datetime
+import time
 import pytz
 import itertools
 import os
@@ -246,9 +247,14 @@ def acquire_access_token_from_refresh_token():
 
 
 def giveup(exc):
+    if exc.response is not None and exc.response.status_code != 429:
+        # this is the only handler in backoff that contains the status_code in its parameters
+        time_avoid_rate_limit_in_seconds = 30
+        time.sleep(time_avoid_rate_limit_in_seconds)
+        return False
+    
     return exc.response is not None \
-        and 400 <= exc.response.status_code < 500 \
-        and exc.response.status_code != 429
+        and 400 <= exc.response.status_code < 500
 
 def on_giveup(details):
     if len(details['args']) == 2:
@@ -290,14 +296,11 @@ def get_params_and_headers(params):
 
     return params, headers
 
-def jitter_120(value):
-    return 120
-
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
                       max_tries=5,
-                      jitter=jitter_120,
+                      jitter=None,
                       giveup=giveup,
                       on_giveup=on_giveup,
                       interval=10)
