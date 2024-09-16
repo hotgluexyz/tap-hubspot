@@ -296,14 +296,16 @@ def get_params_and_headers(params):
 
     return params, headers
 
-@backoff.on_exception(backoff.constant,
+@backoff.on_exception(backoff.expo,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
                       max_tries=5,
                       jitter=None,
                       giveup=giveup,
                       on_giveup=on_giveup,
-                      interval=10)
+                      base=2,
+                      factor=5,
+                      max_value=60)
 def request(url, params=None):
 
     params, headers = get_params_and_headers(params)
