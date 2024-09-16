@@ -247,14 +247,29 @@ def acquire_access_token_from_refresh_token():
 
 
 def giveup(exc):
-    if exc.response is not None and exc.response.status_code != 429:
-        # this is the only handler in backoff that contains the status_code in its parameters
-        time_avoid_rate_limit_in_seconds = 30
-        time.sleep(time_avoid_rate_limit_in_seconds)
-        return False
-    
-    return exc.response is not None \
-        and 400 <= exc.response.status_code < 500
+      # Check if the exception has a response attribute with a status_code
+      if not getattr(exc, 'response', None) or exc.response is None:
+          return False
+  
+      status_code = getattr(exc.response, 'status_code', None)
+      
+      if status_code is None:
+          LOGGER.warning("Exception response has no status_code.")
+          return False
+      
+      # If the status code is not 429 (rate limit) sleep and continue
+      if status_code == 429:
+          time_avoid_rate_limit_in_seconds = 30
+          LOGGER.info(f"Sleeping for {time_avoid_rate_limit_in_seconds} seconds due to status code {status_code}.")
+          time.sleep(time_avoid_rate_limit_in_seconds)
+          return False
+      
+      # If the status code is in the range of 400 to 499
+      if 400 <= status_code < 500:
+          LOGGER.info(f"Non-retriable error with status code {status_code}.")
+          return True
+  
+      return False
 
 def on_giveup(details):
     if len(details['args']) == 2:
