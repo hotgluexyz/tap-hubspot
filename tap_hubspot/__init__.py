@@ -251,8 +251,11 @@ def giveup(exc):
         and exc.response.status_code != 429
 
 def on_giveup(details):
-    if len(details['args']) == 2:
+    if len(details['args']) == 2 and details['args'][1] is not None:
         url, params = details['args']
+    elif 'kwargs' in details:
+        url = details['args'][0]
+        params = details['kwargs']['params']
     else:
         url = details['args']
         params = {}
@@ -496,7 +499,12 @@ def sync_contacts(STATE, ctx):
                 params["formSubmissionMode"] = "all"
                 break_loop = False
                 while not break_loop:
-                    data = request(get_url("list_contacts_recent", list_id=list_id), params=params).json()
+                    try:
+                        data = request(get_url("list_contacts_recent", list_id=list_id), params=params).json()
+                    except Exception as e:
+                        LOGGER.error(f"Error requesting list of contacts recent: {e}")
+                        # While we are still using v1 endpoint and plan to migrate to v3, we will ignore the list_id for now
+                        break
                     for record in data.get("contacts", []):
 
                         modified_time = utils.strptime_with_tz(
