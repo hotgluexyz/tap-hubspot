@@ -416,49 +416,37 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
 
     with metrics.record_counter(tap_stream_id) as counter:
         while True:
-            try:
-                resp = request(url, params)
-                try:
-                    data = resp.json()
-                except requests.exceptions.JSONDecodeError as e:
-                    LOGGER.error("Failed to parse JSON response from %s. Error: %s", url, str(e))
-                    LOGGER.error("Response status code: %d", resp.status_code)
-                    LOGGER.error("Response preview: %s", resp.text[:1000])
-                    raise
+            data = request(url, params).json()
 
-                if path is None:
-                    path = 'data'
-                    data = {'data': data}
+            if path is None:
+                path = 'data'
+                data = {'data': data}
 
-                if data.get(path) is None:
-                    raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
+            if data.get(path) is None:
+                raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
 
-                if v3_fields:
-                    v3_data = get_v3_deals(v3_fields, data[path])
+            if v3_fields:
+                v3_data = get_v3_deals(v3_fields, data[path])
 
-                    # The shape of v3_data is different than the V1 response,
-                    # so we transform v3 to look like v1
-                    transformed_v3_data = process_v3_deals_records(v3_data)
-                    merge_responses(data[path], transformed_v3_data)
+                # The shape of v3_data is different than the V1 response,
+                # so we transform v3 to look like v1
+                transformed_v3_data = process_v3_deals_records(v3_data)
+                merge_responses(data[path], transformed_v3_data)
 
-                for row in data[path]:
-                    counter.increment()
-                    yield row
+            for row in data[path]:
+                counter.increment()
+                yield row
 
-                if not data.get(more_key, False):
-                    break
+            if not data.get(more_key, False):
+                break
 
-                STATE = singer.clear_offset(STATE, tap_stream_id)
-                for key, target in zip(offset_keys, offset_targets):
-                    if key in data:
-                        params[target] = data[key]
-                        STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
+            STATE = singer.clear_offset(STATE, tap_stream_id)
+            for key, target in zip(offset_keys, offset_targets):
+                if key in data:
+                    params[target] = data[key]
+                    STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
 
-                singer.write_state(STATE)
-
-            except requests.exceptions.JSONDecodeError as e:
-                LOGGER.error("JSON decode error for %s: %s", url, str(e))
-                raise
+            singer.write_state(STATE)
 
     STATE = singer.clear_offset(STATE, tap_stream_id)
     singer.write_state(STATE)
