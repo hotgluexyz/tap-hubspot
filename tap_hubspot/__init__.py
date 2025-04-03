@@ -19,6 +19,11 @@ from singer import (transform,
                     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                     Transformer, _transform_datetime)
 
+try:
+    from requests.exceptions import JSONDecodeError
+except ImportError:
+    JSONDecodeError = ValueError
+
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
@@ -401,7 +406,7 @@ def get_v3_deals(v3_fields, v1_data):
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError,
-                       requests.exceptions.JSONDecodeError),
+                       JSONDecodeError),
                       max_tries=5,
                       jitter=None,
                       giveup=giveup,
