@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import json
+from urllib.parse import quote
 
 import attr
 import backoff
@@ -480,7 +481,8 @@ def _sync_subscription_types(catalog, subscribers_emails, schema, bumble_bee):
         return
     
     for subscriber_email in subscribers_emails:
-        record = request(get_url("subscription_types", subscriber_email=subscriber_email)).json()
+        url = get_url("subscription_types", subscriber_email=quote(subscriber_email))
+        record = request(url).json()
         time_extracted = utils.now()
         mdata = metadata.to_map(catalog.get('metadata'))
 
