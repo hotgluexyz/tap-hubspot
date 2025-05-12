@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import datetime
+import time
 import pytz
 import itertools
 import os
@@ -252,9 +253,29 @@ def acquire_access_token_from_refresh_token():
 
 
 def giveup(exc):
-    return exc.response is not None \
-        and 400 <= exc.response.status_code < 500 \
-        and exc.response.status_code != 429
+      # Check if the exception has a response attribute with a status_code
+      if not getattr(exc, 'response', None) or exc.response is None:
+          return False
+  
+      status_code = getattr(exc.response, 'status_code', None)
+      
+      if status_code is None:
+          LOGGER.warning("Exception response has no status_code.")
+          return False
+      
+      # If the status code is not 429 (rate limit) sleep and continue
+      if status_code == 429:
+          time_avoid_rate_limit_in_seconds = 30
+          LOGGER.info(f"Sleeping for {time_avoid_rate_limit_in_seconds} seconds due to status code {status_code}.")
+          time.sleep(time_avoid_rate_limit_in_seconds)
+          return False
+      
+      # If the status code is in the range of 400 to 499
+      if 400 <= status_code < 500:
+          LOGGER.info(f"Non-retriable error with status code {status_code}.")
+          return True
+  
+      return False
 
 def on_giveup(details):
     if len(details['args']) == 2 and details['args'][1] is not None:
@@ -299,15 +320,16 @@ def get_params_and_headers(params):
 
     return params, headers
 
-
-@backoff.on_exception(backoff.constant,
+@backoff.on_exception(backoff.expo,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
                       max_tries=5,
                       jitter=None,
                       giveup=giveup,
                       on_giveup=on_giveup,
-                      interval=10)
+                      base=2,
+                      factor=5,
+                      max_value=60)
 def request(url, params=None):
 
     params, headers = get_params_and_headers(params)
