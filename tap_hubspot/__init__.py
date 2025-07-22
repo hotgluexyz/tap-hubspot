@@ -505,7 +505,7 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
 default_contact_params = {
     'showListMemberships': True,
     'includeVersion': True,
-    'count': 10,
+    'count': 50
 }
 
 def _sync_subscription_types(catalog, subscribers_emails, schema, bumble_bee):
@@ -534,7 +534,7 @@ def sync_contacts(STATE, ctx):
     singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
     singer.write_schema("subscription_types", subscription_types_schema, ["subscriber_email"], [bookmark_key], catalog.get('stream_alias'))
     url = get_url("contact_lists")
-    params = {'count': 100}
+    params = {'count': 50}
     lists = gen_request(STATE, 'contact_lists', url, params, 'lists', 'has-more', ['offset'], ['offset'])
     list_ids = [l["listId"] for l in lists]
     newly_added = []
@@ -568,7 +568,7 @@ def sync_contacts(STATE, ctx):
                             break_loop = True
                             break
 
-                        if len(vids) == 10:
+                        if len(vids) == 50:
                             _sync_contact_vids(catalog, vids, schema, bumble_bee)
                             vids = []
                     
@@ -603,7 +603,7 @@ def sync_contacts(STATE, ctx):
             if modified_time and modified_time > max_bk_value:
                 max_bk_value = modified_time
 
-            if len(vids) == 10:
+            if len(vids) == 50:
                 _sync_contact_vids(catalog, vids, schema, bumble_bee)
                 vids = []
 
