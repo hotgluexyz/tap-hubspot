@@ -459,14 +459,18 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
 
 
 def get_selected_contact_properties(mdata):
-    """Extract selected property names from metadata (without 'property_' prefix)"""
+    """Extract selected property names from metadata for HubSpot API"""
     selected_properties = []
     
-    # Get selected custom properties
+    # Get selected and automatic inclusion properties
     for breadcrumb, metadata_map in mdata.items():
-        if (len(breadcrumb) == 2 and 
-            metadata_map.get('selected') == True):
-            selected_properties.append(breadcrumb[1])
+        if len(breadcrumb) == 2:
+            field_name = breadcrumb[1]
+            is_selected = metadata_map.get('selected') == True
+            is_automatic = metadata_map.get('inclusion') == 'automatic'
+            
+            if is_selected or is_automatic:
+                selected_properties.append(field_name)
     
     return selected_properties
 
