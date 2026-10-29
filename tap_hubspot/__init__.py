@@ -230,14 +230,12 @@ def load_schema(entity_name):
 def acquire_access_token_from_refresh_token():
     payload = {
         "grant_type": "refresh_token",
-        "redirect_uri": CONFIG['redirect_uri'],
         "refresh_token": CONFIG['refresh_token'],
         "client_id": CONFIG['client_id'],
         "client_secret": CONFIG['client_secret'],
     }
 
-
-    resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+    resp = requests.post(BASE_URL + "/oauth/2026-03/token", data=payload)
     if resp.status_code == 403:
         raise InvalidAuthException(resp.content)
 
